@@ -21,9 +21,15 @@
     <div class="flex-grow-1 p-4">
       <div class="d-flex justify-content-between align-items-center">
         <h4>Add New Item</h4>
-        <button id="exportItems" class="btn btn-success btn-sm">⬇️ Export to Excel</button>
+        <div class="d-flex gap-2">
+          <button id="uploadItems" class="btn btn-primary btn-sm">📤 Upload Items</button>
+          <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;" />
+          <button id="exportItems" class="btn btn-success btn-sm">⬇️ Export to Excel</button>
+        </div>
       </div>
+
       <hr>
+
       <div class="card p-3 mb-4">
         <form id="addItemForm" class="row g-3">
           <div class="col-md-6">
@@ -63,7 +69,9 @@
     </div>
   </div>
 
+  <!-- XLSX library -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Your main script -->
   <script type="module" src="script.js"></script>
 </body>
 </html>
