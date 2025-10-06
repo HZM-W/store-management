@@ -201,13 +201,49 @@ export async function initItemsPage() {
 /* ---------- Transactions page ---------- */
 export async function initTransactionsPage() {
   const form = document.getElementById('addTransactionForm');
+  const skuInput = document.getElementById('txSku');
+  const itemNameInput = document.getElementById('txItemName');
+  const categoryInput = document.getElementById('txCategory');
+
+  // 🔹 Auto-fill Item Name + Category when SKU is typed
+  if (skuInput) {
+    skuInput.addEventListener('input', async () => {
+      const sku = skuInput.value.trim();
+      if (!sku) {
+        itemNameInput.value = '';
+        categoryInput.value = '';
+        return;
+      }
+
+      try {
+        const itemRef = doc(db, 'items', sku);
+        const snap = await getDoc(itemRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          itemNameInput.value = data.name || '';
+          categoryInput.value = data.category || '';
+        } else {
+          itemNameInput.value = 'Not found';
+          categoryInput.value = '';
+        }
+      } catch (error) {
+        console.error('Error fetching item details:', error);
+        itemNameInput.value = '';
+        categoryInput.value = '';
+      }
+    });
+  }
+
+  // 🔹 Add new transaction
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const sku = document.getElementById('txSku').value.trim();
+      const sku = skuInput.value.trim();
       const type = document.getElementById('txType').value;
       const qty = Math.max(0, parseInt(document.getElementById('txQty').value || '0', 10));
       const notes = document.getElementById('txNotes').value || '';
+      const itemName = itemNameInput.value.trim();
+      const category = categoryInput.value.trim();
 
       if (!sku || qty <= 0) {
         alert('Please provide SKU and a quantity > 0');
@@ -218,6 +254,7 @@ export async function initTransactionsPage() {
       const itemRef = doc(db, 'items', sku);
 
       try {
+        // Update item quantity
         await updateDoc(itemRef, { qty: increment(change) });
       } catch (err) {
         alert('Failed to update item. Make sure item (SKU) exists.');
@@ -226,6 +263,7 @@ export async function initTransactionsPage() {
       }
 
       try {
+        // Update stock status after update
         const snap = await getDoc(itemRef);
         const newQty = (snap.data()?.qty ?? 0);
         const newStatus = newQty <= 5 ? 'Low Stock' : 'In Stock';
@@ -234,35 +272,44 @@ export async function initTransactionsPage() {
         console.warn('Could not update computed status', err);
       }
 
+      // Save transaction details
       await addDoc(collection(db, 'transactions'), {
-        sku, type: type === 'in' ? 'Stock In' : 'Stock Out',
+        sku,
+        itemName,
+        category,
+        type: type === 'in' ? 'Stock In' : 'Stock Out',
         qtyChange: change,
         notes,
         timestamp: serverTimestamp()
       });
 
-      alert('Transaction recorded');
+      alert('Transaction recorded successfully.');
       window.location.reload();
     });
   }
 
-  // Load transactions table
+  // 🔹 Load transactions table
   const tbody = document.getElementById('transactionsTable');
   if (tbody) {
     tbody.innerHTML = '';
     const q = query(collection(db, 'transactions'), orderBy('timestamp', 'desc'));
     const snap = await getDocs(q);
     const rows = [];
+
     snap.forEach(d => {
       const data = d.data();
-      rows.push(`<tr>
-        <td>${fmtDate(data.timestamp)}</td>
-        <td>${data.type || ''}</td>
-        <td>${data.sku || ''}</td>
-        <td>${data.itemName || ''}</td>
-        <td>${(data.qtyChange > 0 ? '+' : '') + data.qtyChange } ${data.notes || ''}</td>
-      </tr>`);
+      rows.push(`
+        <tr>
+          <td>${fmtDate(data.timestamp)}</td>
+          <td>${data.type || ''}</td>
+          <td>${data.sku || ''}</td>
+          <td>${data.itemName || ''}</td>
+          <td>${data.category || ''}</td>
+          <td>${(data.qtyChange > 0 ? '+' : '') + data.qtyChange} ${data.notes || ''}</td>
+        </tr>
+      `);
     });
+
     tbody.innerHTML = rows.join('');
 
     // 🔍 Search Filter
@@ -270,8 +317,7 @@ export async function initTransactionsPage() {
     if (s) {
       s.addEventListener('input', () => {
         const term = s.value.toLowerCase();
-        const tr = tbody.getElementsByTagName('tr');
-        Array.from(tr).forEach(r => {
+        Array.from(tbody.getElementsByTagName('tr')).forEach(r => {
           const text = r.textContent.toLowerCase();
           r.style.display = text.includes(term) ? '' : 'none';
         });

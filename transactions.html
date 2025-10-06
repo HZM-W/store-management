@@ -10,7 +10,10 @@
 <body class="bg-light">
   <div class="d-flex">
     <div class="bg-white border-end vh-100 p-3" style="width: 250px;">
-      <h5 class="mb-4"><img src="https://cdn-icons-png.flaticon.com/512/3074/3074142.png" width="25" class="me-2">Store Management</h5>
+      <h5 class="mb-4">
+        <img src="https://cdn-icons-png.flaticon.com/512/3074/3074142.png" width="25" class="me-2">
+        Store Management
+      </h5>
       <ul class="nav flex-column">
         <li class="nav-item"><a href="index.html" class="nav-link">📦 Inventory</a></li>
         <li class="nav-item"><a href="transactions.html" class="nav-link active">🔄 Transactions</a></li>
@@ -36,6 +39,7 @@
               <th>Type</th>
               <th>SKU</th>
               <th>Item</th>
+              <th>Category</th>
               <th>Quantity / Notes</th>
             </tr>
           </thead>
@@ -57,6 +61,14 @@
           <div class="mb-2">
             <label class="form-label">SKU</label>
             <input id="txSku" class="form-control" required placeholder="e.g., MOD-001">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Item Name</label>
+            <input id="txItemName" class="form-control" readonly placeholder="Auto-filled when SKU is valid">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Category</label>
+            <input id="txCategory" class="form-control" readonly placeholder="Auto-filled when SKU is valid">
           </div>
           <div class="mb-2">
             <label class="form-label">Type</label>
