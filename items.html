@@ -3,62 +3,75 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Store Management - Inventory</title>
+  <title>Store Management - Items</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-light">
   <div class="d-flex">
-    <!-- Sidebar -->
     <div class="bg-white border-end vh-100 p-3" style="width: 250px;">
       <h5 class="mb-4"><img src="https://cdn-icons-png.flaticon.com/512/3074/3074142.png" width="25" class="me-2">Store Management</h5>
       <ul class="nav flex-column">
-        <li class="nav-item"><a href="index.html" class="nav-link active">📦 Inventory</a></li>
+        <li class="nav-item"><a href="index.html" class="nav-link">📦 Inventory</a></li>
         <li class="nav-item"><a href="transactions.html" class="nav-link">🔄 Transactions</a></li>
-        <li class="nav-item"><a href="items.html" class="nav-link">➕ Items</a></li>
+        <li class="nav-item"><a href="items.html" class="nav-link active">➕ Items</a></li>
       </ul>
     </div>
 
-    <!-- Main -->
     <div class="flex-grow-1 p-4">
       <div class="d-flex justify-content-between align-items-center">
-        <h4>Inventory Overview</h4>
-        <button id="exportInventory" class="btn btn-success btn-sm">⬇️ Export to Excel</button>
+        <h4>Add New Item</h4>
+        <div class="d-flex gap-2">
+          <button id="uploadItems" class="btn btn-primary btn-sm">📤 Upload Items</button>
+          <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;" />
+          <button id="exportItems" class="btn btn-success btn-sm">⬇️ Export to Excel</button>
+        </div>
       </div>
+
       <hr>
 
       <div class="card p-3 mb-4">
-        <h6 class="text-muted">Total Items</h6>
-        <h2 id="totalItems">0</h2>
-        <p class="text-muted" id="productCount">Across 0 products</p>
+        <form id="addItemForm" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">SKU *</label>
+            <input id="sku" class="form-control" placeholder="e.g., MOD-001" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Item Name *</label>
+            <input id="name" class="form-control" placeholder="e.g., Arduino Uno R3" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Category *</label>
+            <input id="category" class="form-control" placeholder="e.g., Microcontrollers" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Current Stock</label>
+            <input id="currentStock" type="number" class="form-control" placeholder="e.g., 50">
+            <div class="form-text">Optional — leave blank for 0</div>
+          </div>
+
+          <div class="col-12">
+            <button class="btn btn-primary" type="submit">Add Item</button>
+            <a href="item_template.xlsx" download class="btn btn-outline-secondary">Download Template</a>
+          </div>
+        </form>
       </div>
 
       <div class="card p-3">
-        <div class="d-flex justify-content-between mb-3">
-          <h5>Current Inventory</h5>
-          <div>
-            <input id="searchInventory" placeholder="Search items..." class="form-control form-control-sm d-inline-block me-2" style="width: 250px;">
-            <a class="btn btn-outline-secondary btn-sm" href="items.html">Add Item</a>
-          </div>
-        </div>
-
-        <table class="table align-middle" id="inventoryTableContainer">
+        <h5>All Items</h5>
+        <table class="table align-middle mt-3" id="allItemsTableContainer">
           <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Item Name</th>
-              <th>Category</th>
-              <th>Quantity</th>
-              <th>Status</th>
-            </tr>
+            <tr><th>SKU</th><th>Item Name</th><th>Category</th><th>Current Stock</th></tr>
           </thead>
-          <tbody id="inventoryTable"></tbody>
+          <tbody id="allItemsTable"></tbody>
         </table>
       </div>
     </div>
   </div>
 
+  <!-- XLSX library -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Your main script -->
   <script type="module" src="script.js"></script>
 </body>
 </html>
