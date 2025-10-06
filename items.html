@@ -9,8 +9,12 @@
 </head>
 <body class="bg-light">
   <div class="d-flex">
+    <!-- Sidebar -->
     <div class="bg-white border-end vh-100 p-3" style="width: 250px;">
-      <h5 class="mb-4"><img src="https://cdn-icons-png.flaticon.com/512/3074/3074142.png" width="25" class="me-2">Store Management</h5>
+      <h5 class="mb-4">
+        <img src="https://cdn-icons-png.flaticon.com/512/3074/3074142.png" width="25" class="me-2">
+        Store Management
+      </h5>
       <ul class="nav flex-column">
         <li class="nav-item"><a href="index.html" class="nav-link">📦 Inventory</a></li>
         <li class="nav-item"><a href="transactions.html" class="nav-link">🔄 Transactions</a></li>
@@ -18,6 +22,7 @@
       </ul>
     </div>
 
+    <!-- Main -->
     <div class="flex-grow-1 p-4">
       <div class="d-flex justify-content-between align-items-center">
         <h4>Add New Item</h4>
@@ -57,11 +62,22 @@
         </form>
       </div>
 
+      <!-- All Items Table -->
       <div class="card p-3">
-        <h5>All Items</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5>All Items</h5>
+          <input id="searchItems" placeholder="Search items..." class="form-control form-control-sm" style="width: 250px;">
+        </div>
+
         <table class="table align-middle mt-3" id="allItemsTableContainer">
           <thead>
-            <tr><th>SKU</th><th>Item Name</th><th>Category</th><th>Current Stock</th></tr>
+            <tr>
+              <th>SKU</th>
+              <th>Item Name</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Action</th>
+            </tr>
           </thead>
           <tbody id="allItemsTable"></tbody>
         </table>

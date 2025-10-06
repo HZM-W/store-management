@@ -111,8 +111,28 @@ export async function initItemsPage() {
     const snap = await getDocs(q);
     snap.forEach(d => {
       const data = d.data();
-      table.innerHTML += `<tr><td>${data.sku || d.id}</td><td>${data.name || ''}</td><td>${data.category || ''}</td><td>${data.qty || 0}</td></tr>`;
+      table.innerHTML += `
+        <tr>
+          <td>${data.sku || d.id}</td>
+          <td>${data.name || ''}</td>
+          <td>${data.category || ''}</td>
+          <td>${data.qty || 0}</td>
+          <td><button class="btn btn-danger btn-sm delete-item" data-sku="${data.sku || d.id}">🗑 Delete</button></td>
+        </tr>`;
     });
+
+    // Attach delete listeners
+    table.querySelectorAll('.delete-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sku = btn.getAttribute('data-sku');
+        if (confirm(`Are you sure you want to delete item "${sku}"?`)) {
+          await deleteDoc(doc(db, 'items', sku));
+          alert(`Item "${sku}" deleted successfully.`);
+          window.location.reload();
+        }
+      });
+    });
+
   }
 }
 
