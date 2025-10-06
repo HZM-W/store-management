@@ -1,7 +1,7 @@
 // script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, setDoc, doc, addDoc,
+  getFirestore, collection, getDocs, setDoc, doc, addDoc, deleteDoc,
   query, orderBy, updateDoc, increment, serverTimestamp, getDoc
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
@@ -80,40 +80,122 @@ export async function loadInventory() {
 /* ---------- Items page ---------- */
 export async function initItemsPage() {
   const form = document.getElementById('addItemForm');
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const sku = document.getElementById('sku').value.trim();
-      const name = document.getElementById('name').value.trim();
-      const category = document.getElementById('category').value.trim();
-      const currentStock = parseInt(document.getElementById('currentStock').value || '0', 10);
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const editModeInput = document.getElementById('editMode');
+  const submitBtn = document.getElementById('submitItemBtn');
+  const tableBody = document.getElementById('allItemsTable');
 
-      if (!sku || !name || !category) {
-        alert('Please fill SKU, Item Name and Category.');
-        return;
-      }
+  let editSKU = null;
 
-      await setDoc(doc(db, 'items', sku), {
-        sku, name, category,
-        qty: currentStock,
-        status: currentStock <= 5 ? 'Low Stock' : 'In Stock'
-      });
-
-      alert('Item added');
-      window.location.href = 'index.html';
-    });
-  }
-
-  const table = document.getElementById('allItemsTable');
-  if (table) {
-    table.innerHTML = '';
+  // Load Items
+  async function loadItems() {
+    tableBody.innerHTML = '';
     const q = query(collection(db, 'items'), orderBy('sku'));
     const snap = await getDocs(q);
     snap.forEach(d => {
       const data = d.data();
-      table.innerHTML += `<tr><td>${data.sku || d.id}</td><td>${data.name || ''}</td><td>${data.category || ''}</td><td>${data.qty || 0}</td></tr>`;
+      tableBody.innerHTML += `
+        <tr>
+          <td>${data.sku}</td>
+          <td>${data.name}</td>
+          <td>${data.category}</td>
+          <td>${data.qty || 0}</td>
+          <td>
+            <button class="btn btn-sm btn-warning edit-btn" data-sku="${data.sku}">✏️ Edit</button>
+            <button class="btn btn-sm btn-danger delete-btn" data-sku="${data.sku}">🗑️ Delete</button>
+          </td>
+        </tr>`;
+    });
+    attachActionHandlers();
+  }
+
+  // Attach Edit/Delete handlers
+  function attachActionHandlers() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sku = btn.dataset.sku;
+        const docRef = doc(db, 'items', sku);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return alert('Item not found!');
+        const data = snap.data();
+        editModeInput.value = "true";
+        editSKU = sku;
+        submitBtn.textContent = "Update Item";
+        cancelEditBtn.classList.remove('d-none');
+
+        // Fill form
+        document.getElementById('sku').value = data.sku;
+        document.getElementById('name').value = data.name;
+        document.getElementById('category').value = data.category;
+        document.getElementById('currentStock').value = data.qty || 0;
+
+        // Disable SKU when editing
+        document.getElementById('sku').disabled = true;
+      });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sku = btn.dataset.sku;
+        if (!confirm(`Are you sure you want to delete ${sku}?`)) return;
+        await deleteDoc(doc(db, 'items', sku));
+        alert('Item deleted successfully.');
+        loadItems();
+      });
     });
   }
+
+  // Cancel Edit
+  cancelEditBtn.addEventListener('click', () => {
+    form.reset();
+    editModeInput.value = "false";
+    editSKU = null;
+    submitBtn.textContent = "Add Item";
+    cancelEditBtn.classList.add('d-none');
+    document.getElementById('sku').disabled = false;
+  });
+
+  // Add / Update Item
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const sku = document.getElementById('sku').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const category = document.getElementById('category').value.trim();
+    const currentStock = parseInt(document.getElementById('currentStock').value || '0', 10);
+
+    if (!sku || !name || !category) {
+      alert('Please fill SKU, Item Name and Category.');
+      return;
+    }
+
+    const itemData = {
+      sku,
+      name,
+      category,
+      qty: currentStock,
+      status: currentStock <= 5 ? 'Low Stock' : 'In Stock'
+    };
+
+    if (editModeInput.value === "true" && editSKU) {
+      await updateDoc(doc(db, 'items', editSKU), itemData);
+      alert('Item updated successfully!');
+    } else {
+      await setDoc(doc(db, 'items', sku), itemData);
+      alert('Item added successfully!');
+    }
+
+    form.reset();
+    editModeInput.value = "false";
+    editSKU = null;
+    submitBtn.textContent = "Add Item";
+    cancelEditBtn.classList.add('d-none');
+    document.getElementById('sku').disabled = false;
+
+    loadItems();
+  });
+
+  // Load items initially
+  loadItems();
 }
 
 /* ---------- Transactions page ---------- */
@@ -198,13 +280,6 @@ export async function initTransactionsPage() {
   }
 }
 
-/* ---------- Auto-run ---------- */
-(function runPageInit() {
-  if (document.getElementById('inventoryTable')) loadInventory();
-  if (document.getElementById('addItemForm')) initItemsPage();
-  if (document.getElementById('addTransactionForm')) initTransactionsPage();
-})();
-
 /* ---------- Export to Excel ---------- */
 function exportTableToExcel(tableId, filename) {
   const table = document.getElementById(tableId);
@@ -270,3 +345,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+/* ---------- Auto-run ---------- */
+(function runPageInit() {
+  if (document.getElementById('inventoryTable')) loadInventory();
+  if (document.getElementById('addItemForm')) initItemsPage();
+  if (document.getElementById('addTransactionForm')) initTransactionsPage();
+})();
