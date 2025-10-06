@@ -2,7 +2,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
   getFirestore, collection, getDocs, setDoc, doc, addDoc,
-  query, orderBy, updateDoc, increment, serverTimestamp, getDoc
+  query, orderBy, updateDoc, increment, serverTimestamp,
+  getDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 /* ---------- Firebase Config ---------- */
@@ -32,16 +33,16 @@ function fmtDate(ts) {
   return d.toLocaleString();
 }
 
-/* ---------- Inventory page ---------- */
+/* ---------- Inventory Page ---------- */
 export async function loadInventory() {
   const tbody = document.getElementById('inventoryTable');
   if (!tbody) return;
+
   tbody.innerHTML = '';
-  const itemsRef = collection(db, 'items');
-  const q = query(itemsRef, orderBy('sku'));
+  const q = query(collection(db, 'items'), orderBy('sku'));
   const snap = await getDocs(q);
-  let total = 0, count = 0;
-  const rows = [];
+
+  let total = 0, count = 0, rows = [];
 
   snap.forEach(docSnap => {
     const data = docSnap.data();
@@ -77,7 +78,7 @@ export async function loadInventory() {
   }
 }
 
-/* ---------- Items page ---------- */
+/* ---------- Items Page ---------- */
 export async function initItemsPage() {
   const form = document.getElementById('addItemForm');
   if (form) {
@@ -89,7 +90,7 @@ export async function initItemsPage() {
       const currentStock = parseInt(document.getElementById('currentStock').value || '0', 10);
 
       if (!sku || !name || !category) {
-        alert('Please fill SKU, Item Name and Category.');
+        alert('Please fill SKU, Item Name, and Category.');
         return;
       }
 
@@ -99,7 +100,7 @@ export async function initItemsPage() {
         status: currentStock <= 5 ? 'Low Stock' : 'In Stock'
       });
 
-      alert('Item added');
+      alert('Item added successfully!');
       window.location.href = 'index.html';
     });
   }
@@ -109,6 +110,7 @@ export async function initItemsPage() {
     table.innerHTML = '';
     const q = query(collection(db, 'items'), orderBy('sku'));
     const snap = await getDocs(q);
+
     snap.forEach(d => {
       const data = d.data();
       table.innerHTML += `
@@ -121,7 +123,7 @@ export async function initItemsPage() {
         </tr>`;
     });
 
-    // Attach delete listeners
+    // Delete functionality
     table.querySelectorAll('.delete-item').forEach(btn => {
       btn.addEventListener('click', async () => {
         const sku = btn.getAttribute('data-sku');
@@ -133,10 +135,22 @@ export async function initItemsPage() {
       });
     });
 
+    // 🔍 Search Filter
+    const s = document.getElementById('searchItems');
+    if (s) {
+      s.addEventListener('input', () => {
+        const term = s.value.toLowerCase();
+        const tr = table.getElementsByTagName('tr');
+        Array.from(tr).forEach(r => {
+          const text = r.textContent.toLowerCase();
+          r.style.display = text.includes(term) ? '' : 'none';
+        });
+      });
+    }
   }
 }
 
-/* ---------- Transactions page ---------- */
+/* ---------- Transactions Page ---------- */
 export async function initTransactionsPage() {
   const form = document.getElementById('addTransactionForm');
   if (form) {
@@ -148,7 +162,7 @@ export async function initTransactionsPage() {
       const notes = document.getElementById('txNotes').value || '';
 
       if (!sku || qty <= 0) {
-        alert('Please provide SKU and a quantity > 0');
+        alert('Please provide SKU and a quantity > 0.');
         return;
       }
 
@@ -158,7 +172,7 @@ export async function initTransactionsPage() {
       try {
         await updateDoc(itemRef, { qty: increment(change) });
       } catch (err) {
-        alert('Failed to update item. Make sure item (SKU) exists.');
+        alert('Failed to update item. Ensure SKU exists.');
         console.error(err);
         return;
       }
@@ -173,34 +187,37 @@ export async function initTransactionsPage() {
       }
 
       await addDoc(collection(db, 'transactions'), {
-        sku, type: type === 'in' ? 'Stock In' : 'Stock Out',
+        sku,
+        type: type === 'in' ? 'Stock In' : 'Stock Out',
         qtyChange: change,
         notes,
         timestamp: serverTimestamp()
       });
 
-      alert('Transaction recorded');
+      alert('Transaction recorded!');
       window.location.reload();
     });
   }
 
-  // Load transactions table
   const tbody = document.getElementById('transactionsTable');
   if (tbody) {
     tbody.innerHTML = '';
     const q = query(collection(db, 'transactions'), orderBy('timestamp', 'desc'));
     const snap = await getDocs(q);
+
     const rows = [];
     snap.forEach(d => {
       const data = d.data();
-      rows.push(`<tr>
-        <td>${fmtDate(data.timestamp)}</td>
-        <td>${data.type || ''}</td>
-        <td>${data.sku || ''}</td>
-        <td>${data.itemName || ''}</td>
-        <td>${(data.qtyChange > 0 ? '+' : '') + data.qtyChange } ${data.notes || ''}</td>
-      </tr>`);
+      rows.push(`
+        <tr>
+          <td>${fmtDate(data.timestamp)}</td>
+          <td>${data.type || ''}</td>
+          <td>${data.sku || ''}</td>
+          <td>${data.itemName || ''}</td>
+          <td>${(data.qtyChange > 0 ? '+' : '') + data.qtyChange} ${data.notes || ''}</td>
+        </tr>`);
     });
+
     tbody.innerHTML = rows.join('');
 
     // 🔍 Search Filter
@@ -218,7 +235,7 @@ export async function initTransactionsPage() {
   }
 }
 
-/* ---------- Auto-run ---------- */
+/* ---------- Auto Init Based on Page ---------- */
 (function runPageInit() {
   if (document.getElementById('inventoryTable')) loadInventory();
   if (document.getElementById('addItemForm')) initItemsPage();
@@ -233,16 +250,16 @@ function exportTableToExcel(tableId, filename) {
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-/* ---------- Bind export buttons ---------- */
+/* ---------- Bind Export Buttons ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   const exportInventory = document.getElementById('exportInventory');
-  if (exportInventory) exportInventory.addEventListener('click', () => exportTableToExcel('inventoryTableContainer', 'Inventory'));
+  if (exportInventory) exportInventory.addEventListener('click', () => exportTableToExcel('inventoryTable', 'Inventory'));
 
   const exportItems = document.getElementById('exportItems');
-  if (exportItems) exportItems.addEventListener('click', () => exportTableToExcel('allItemsTableContainer', 'Items'));
+  if (exportItems) exportItems.addEventListener('click', () => exportTableToExcel('allItemsTable', 'Items'));
 
   const exportTransactions = document.getElementById('exportTransactions');
-  if (exportTransactions) exportTransactions.addEventListener('click', () => exportTableToExcel('transactionsTableContainer', 'Transactions'));
+  if (exportTransactions) exportTransactions.addEventListener('click', () => exportTableToExcel('transactionsTable', 'Transactions'));
 });
 
 /* ---------- Upload Items from Excel ---------- */
@@ -269,8 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const sku = item.SKU || item.sku;
           if (!sku) continue;
 
-          const docRef = doc(db, 'items', sku);
-          await setDoc(docRef, {
+          await setDoc(doc(db, 'items', sku), {
             sku,
             name: item['Item Name'] || item.name || '',
             category: item['Category'] || item.category || '',
