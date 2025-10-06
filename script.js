@@ -191,3 +191,25 @@ export async function initTransactionsPage() {
     initTransactionsPage();
   }
 })();
+/* ---------- Export to Excel ---------- */
+function exportTableToExcel(tableId, filename) {
+  const table = document.getElementById(tableId);
+  if (!table) {
+    alert('No table found to export.');
+    return;
+  }
+  const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+/* ---------- Bind export buttons ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const exportInventory = document.getElementById('exportInventory');
+  if (exportInventory) exportInventory.addEventListener('click', () => exportTableToExcel('inventoryTableContainer', 'Inventory'));
+
+  const exportItems = document.getElementById('exportItems');
+  if (exportItems) exportItems.addEventListener('click', () => exportTableToExcel('allItemsTableContainer', 'Items'));
+
+  const exportTransactions = document.getElementById('exportTransactions');
+  if (exportTransactions) exportTransactions.addEventListener('click', () => exportTableToExcel('transactionsTableContainer', 'Transactions'));
+});

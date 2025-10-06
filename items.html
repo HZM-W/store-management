@@ -19,7 +19,10 @@
     </div>
 
     <div class="flex-grow-1 p-4">
-      <h4>Add New Item</h4>
+      <div class="d-flex justify-content-between align-items-center">
+        <h4>Add New Item</h4>
+        <button id="exportItems" class="btn btn-success btn-sm">⬇️ Export to Excel</button>
+      </div>
       <hr>
       <div class="card p-3 mb-4">
         <form id="addItemForm" class="row g-3">
@@ -43,14 +46,14 @@
 
           <div class="col-12">
             <button class="btn btn-primary" type="submit">Add Item</button>
-            <button id="downloadTemplate" type="button" class="btn btn-outline-secondary">Download Template</button>
+            <a href="item_template.xlsx" download class="btn btn-outline-secondary">Download Template</a>
           </div>
         </form>
       </div>
 
       <div class="card p-3">
         <h5>All Items</h5>
-        <table class="table align-middle mt-3">
+        <table class="table align-middle mt-3" id="allItemsTableContainer">
           <thead>
             <tr><th>SKU</th><th>Item Name</th><th>Category</th><th>Current Stock</th></tr>
           </thead>
@@ -60,6 +63,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>
 </html>

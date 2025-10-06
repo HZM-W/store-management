@@ -21,7 +21,10 @@
 
     <!-- Main -->
     <div class="flex-grow-1 p-4">
-      <h4>Inventory Overview</h4>
+      <div class="d-flex justify-content-between align-items-center">
+        <h4>Inventory Overview</h4>
+        <button id="exportInventory" class="btn btn-success btn-sm">⬇️ Export to Excel</button>
+      </div>
       <hr>
 
       <div class="card p-3 mb-4">
@@ -39,7 +42,7 @@
           </div>
         </div>
 
-        <table class="table align-middle">
+        <table class="table align-middle" id="inventoryTableContainer">
           <thead>
             <tr>
               <th>SKU</th>
@@ -55,6 +58,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>
 </html>
