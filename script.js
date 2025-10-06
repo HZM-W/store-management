@@ -5,10 +5,7 @@ import {
   query, orderBy, updateDoc, increment, serverTimestamp, getDoc
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-/*
-  Replace the object below with your Firebase project config.
-  You get this from Firebase Console -> Project Settings -> Your apps -> Config
-*/
+/* ---------- Firebase Config ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyD8-AhyflwKBlLaQg0kPgTRs9b8xH5bfgM",
   authDomain: "store-management-84948.firebaseapp.com",
@@ -44,23 +41,40 @@ export async function loadInventory() {
   const q = query(itemsRef, orderBy('sku'));
   const snap = await getDocs(q);
   let total = 0, count = 0;
+  const rows = [];
+
   snap.forEach(docSnap => {
     const data = docSnap.data();
     const qty = Number(data.qty || 0);
     total += qty;
     count++;
-    const row = `
+    rows.push(`
       <tr>
         <td>${data.sku || docSnap.id}</td>
         <td><strong>${data.name || ''}</strong></td>
         <td>${data.category || ''}</td>
         <td>${qty}</td>
         <td>${createBadge(data.status || (qty <= 5 ? 'Low Stock' : 'In Stock'))}</td>
-      </tr>`;
-    tbody.innerHTML += row;
+      </tr>
+    `);
   });
+
+  tbody.innerHTML = rows.join('');
   document.getElementById('totalItems').innerText = total;
   document.getElementById('productCount').innerText = `Across ${count} products`;
+
+  // 🔍 Search Filter
+  const s = document.getElementById('searchInventory');
+  if (s) {
+    s.addEventListener('input', () => {
+      const term = s.value.toLowerCase();
+      const tr = tbody.getElementsByTagName('tr');
+      Array.from(tr).forEach(r => {
+        const text = r.textContent.toLowerCase();
+        r.style.display = text.includes(term) ? '' : 'none';
+      });
+    });
+  }
 }
 
 /* ---------- Items page ---------- */
@@ -79,7 +93,6 @@ export async function initItemsPage() {
         return;
       }
 
-      // Use SKU as document ID for convenience
       await setDoc(doc(db, 'items', sku), {
         sku, name, category,
         qty: currentStock,
@@ -87,11 +100,10 @@ export async function initItemsPage() {
       });
 
       alert('Item added');
-      window.location.href = 'index.html'; // go to inventory
+      window.location.href = 'index.html';
     });
   }
 
-  // Load all items into table
   const table = document.getElementById('allItemsTable');
   if (table) {
     table.innerHTML = '';
@@ -106,13 +118,12 @@ export async function initItemsPage() {
 
 /* ---------- Transactions page ---------- */
 export async function initTransactionsPage() {
-  // Submit form
   const form = document.getElementById('addTransactionForm');
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const sku = document.getElementById('txSku').value.trim();
-      const type = document.getElementById('txType').value; // 'in' or 'out'
+      const type = document.getElementById('txType').value;
       const qty = Math.max(0, parseInt(document.getElementById('txQty').value || '0', 10));
       const notes = document.getElementById('txNotes').value || '';
 
@@ -124,17 +135,14 @@ export async function initTransactionsPage() {
       const change = type === 'in' ? qty : -qty;
       const itemRef = doc(db, 'items', sku);
 
-      // Update item quantity
       try {
         await updateDoc(itemRef, { qty: increment(change) });
       } catch (err) {
-        // If it does not exist, show error
         alert('Failed to update item. Make sure item (SKU) exists.');
         console.error(err);
         return;
       }
 
-      // Update status based on new qty
       try {
         const snap = await getDoc(itemRef);
         const newQty = (snap.data()?.qty ?? 0);
@@ -144,7 +152,6 @@ export async function initTransactionsPage() {
         console.warn('Could not update computed status', err);
       }
 
-      // Add transaction record
       await addDoc(collection(db, 'transactions'), {
         sku, type: type === 'in' ? 'Stock In' : 'Stock Out',
         qtyChange: change,
@@ -163,41 +170,45 @@ export async function initTransactionsPage() {
     tbody.innerHTML = '';
     const q = query(collection(db, 'transactions'), orderBy('timestamp', 'desc'));
     const snap = await getDocs(q);
+    const rows = [];
     snap.forEach(d => {
       const data = d.data();
-      tbody.innerHTML += `<tr>
+      rows.push(`<tr>
         <td>${fmtDate(data.timestamp)}</td>
         <td>${data.type || ''}</td>
         <td>${data.sku || ''}</td>
         <td>${data.itemName || ''}</td>
         <td>${(data.qtyChange > 0 ? '+' : '') + data.qtyChange } ${data.notes || ''}</td>
-      </tr>`;
+      </tr>`);
     });
+    tbody.innerHTML = rows.join('');
+
+    // 🔍 Search Filter
+    const s = document.getElementById('searchTransactions');
+    if (s) {
+      s.addEventListener('input', () => {
+        const term = s.value.toLowerCase();
+        const tr = tbody.getElementsByTagName('tr');
+        Array.from(tr).forEach(r => {
+          const text = r.textContent.toLowerCase();
+          r.style.display = text.includes(term) ? '' : 'none';
+        });
+      });
+    }
   }
 }
 
-/* ---------- Auto-run depending on page ---------- */
+/* ---------- Auto-run ---------- */
 (function runPageInit() {
-  if (document.getElementById('inventoryTable')) {
-    loadInventory();
-    // search
-    const s = document.getElementById('searchInventory');
-    if (s) s.addEventListener('input', () => { /* small: add client-side filter if you want */ });
-  }
-  if (document.getElementById('addItemForm')) {
-    initItemsPage();
-  }
-  if (document.getElementById('addTransactionForm')) {
-    initTransactionsPage();
-  }
+  if (document.getElementById('inventoryTable')) loadInventory();
+  if (document.getElementById('addItemForm')) initItemsPage();
+  if (document.getElementById('addTransactionForm')) initTransactionsPage();
 })();
+
 /* ---------- Export to Excel ---------- */
 function exportTableToExcel(tableId, filename) {
   const table = document.getElementById(tableId);
-  if (!table) {
-    alert('No table found to export.');
-    return;
-  }
+  if (!table) return alert('No table found to export.');
   const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
@@ -214,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (exportTransactions) exportTransactions.addEventListener('click', () => exportTableToExcel('transactionsTableContainer', 'Transactions'));
 });
 
-// ---------- Upload Items from Excel ----------
+/* ---------- Upload Items from Excel ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   const uploadBtn = document.getElementById('uploadItems');
   const fileInput = document.getElementById('fileInput');
