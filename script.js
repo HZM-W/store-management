@@ -215,39 +215,47 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ---------- Upload Items from Excel ----------
-document.getElementById('uploadItems')?.addEventListener('click', () => {
-  document.getElementById('fileInput').click();
-});
+document.addEventListener('DOMContentLoaded', () => {
+  const uploadBtn = document.getElementById('uploadItems');
+  const fileInput = document.getElementById('fileInput');
 
-document.getElementById('fileInput')?.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  if (uploadBtn && fileInput) {
+    uploadBtn.addEventListener('click', () => fileInput.click());
 
-  const reader = new FileReader();
-  reader.onload = async (evt) => {
-    const data = new Uint8Array(evt.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const items = XLSX.utils.sheet_to_json(firstSheet);
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-    let count = 0;
-    for (const item of items) {
-      const sku = item.SKU || item.sku;
-      if (!sku) continue;
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const items = XLSX.utils.sheet_to_json(firstSheet);
 
-      const docRef = doc(db, 'items', sku);
-      await setDoc(docRef, {
-        sku,
-        name: item['Item Name'] || item.name || '',
-        category: item['Category'] || item.category || '',
-        qty: Number(item['Current Stock'] || item['Quantity'] || 0),
-        status: Number(item['Current Stock'] || item['Quantity'] || 0) <= 5 ? 'Low Stock' : 'In Stock'
-      });
-      count++;
-    }
+        let count = 0;
+        for (const item of items) {
+          const sku = item.SKU || item.sku;
+          if (!sku) continue;
 
-    alert(`${count} items uploaded successfully!`);
-    window.location.reload();
-  };
-  reader.readAsArrayBuffer(file);
+          const docRef = doc(db, 'items', sku);
+          await setDoc(docRef, {
+            sku,
+            name: item['Item Name'] || item.name || '',
+            category: item['Category'] || item.category || '',
+            qty: Number(item['Current Stock'] || item['Quantity'] || 0),
+            status: Number(item['Current Stock'] || item['Quantity'] || 0) <= 5
+              ? 'Low Stock'
+              : 'In Stock'
+          });
+          count++;
+        }
+
+        alert(`${count} items uploaded successfully!`);
+        window.location.reload();
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+  }
 });
