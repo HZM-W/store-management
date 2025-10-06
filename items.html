@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Store Management - Items</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+  <div class="d-flex">
+    <div class="bg-white border-end vh-100 p-3" style="width: 250px;">
+      <h5 class="mb-4"><img src="https://cdn-icons-png.flaticon.com/512/3074/3074142.png" width="25" class="me-2">Store Management</h5>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a href="index.html" class="nav-link">📦 Inventory</a></li>
+        <li class="nav-item"><a href="transactions.html" class="nav-link">🔄 Transactions</a></li>
+        <li class="nav-item"><a href="items.html" class="nav-link active">➕ Items</a></li>
+      </ul>
+    </div>
+
+    <div class="flex-grow-1 p-4">
+      <h4>Add New Item</h4>
+      <hr>
+      <div class="card p-3 mb-4">
+        <form id="addItemForm" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">SKU *</label>
+            <input id="sku" class="form-control" placeholder="e.g., MOD-001" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Item Name *</label>
+            <input id="name" class="form-control" placeholder="e.g., Arduino Uno R3" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Category *</label>
+            <input id="category" class="form-control" placeholder="e.g., Microcontrollers" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Current Stock</label>
+            <input id="currentStock" type="number" class="form-control" placeholder="e.g., 50">
+            <div class="form-text">Optional — leave blank for 0</div>
+          </div>
+
+          <div class="col-12">
+            <button class="btn btn-primary" type="submit">Add Item</button>
+            <button id="downloadTemplate" type="button" class="btn btn-outline-secondary">Download Template</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card p-3">
+        <h5>All Items</h5>
+        <table class="table align-middle mt-3">
+          <thead>
+            <tr><th>SKU</th><th>Item Name</th><th>Category</th><th>Current Stock</th></tr>
+          </thead>
+          <tbody id="allItemsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
