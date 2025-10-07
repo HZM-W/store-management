@@ -11,3 +11,7 @@
 }
 .badge-low { background: #ff6b6b; color: #fff; }
 .badge-in { background: #2ecc71; color: #fff; }
+
+.suggestion-item:hover {
+  background-color: #f8f9fa;
+}

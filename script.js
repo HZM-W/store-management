@@ -1,4 +1,3 @@
-// script.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
   getFirestore, collection, getDocs, setDoc, doc, addDoc, deleteDoc,
@@ -87,7 +86,6 @@ export async function initItemsPage() {
 
   let editSKU = null;
 
-  // Load Items
   async function loadItems() {
     tableBody.innerHTML = '';
     const q = query(collection(db, 'items'), orderBy('sku'));
@@ -109,7 +107,6 @@ export async function initItemsPage() {
     attachActionHandlers();
   }
 
-  // Attach Edit/Delete handlers
   function attachActionHandlers() {
     document.querySelectorAll('.edit-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -123,13 +120,10 @@ export async function initItemsPage() {
         submitBtn.textContent = "Update Item";
         cancelEditBtn.classList.remove('d-none');
 
-        // Fill form
         document.getElementById('sku').value = data.sku;
         document.getElementById('name').value = data.name;
         document.getElementById('category').value = data.category;
         document.getElementById('currentStock').value = data.qty || 0;
-
-        // Disable SKU when editing
         document.getElementById('sku').disabled = true;
       });
     });
@@ -145,7 +139,6 @@ export async function initItemsPage() {
     });
   }
 
-  // Cancel Edit
   cancelEditBtn.addEventListener('click', () => {
     form.reset();
     editModeInput.value = "false";
@@ -155,18 +148,13 @@ export async function initItemsPage() {
     document.getElementById('sku').disabled = false;
   });
 
-  // Add / Update Item
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const sku = document.getElementById('sku').value.trim();
     const name = document.getElementById('name').value.trim();
     const category = document.getElementById('category').value.trim();
     const currentStock = parseInt(document.getElementById('currentStock').value || '0', 10);
-
-    if (!sku || !name || !category) {
-      alert('Please fill SKU, Item Name and Category.');
-      return;
-    }
+    if (!sku || !name || !category) return alert('Please fill SKU, Item Name and Category.');
 
     const itemData = {
       sku,
@@ -190,11 +178,9 @@ export async function initItemsPage() {
     submitBtn.textContent = "Add Item";
     cancelEditBtn.classList.add('d-none');
     document.getElementById('sku').disabled = false;
-
     loadItems();
   });
 
-  // Load items initially
   loadItems();
 }
 
@@ -204,37 +190,89 @@ export async function initTransactionsPage() {
   const skuInput = document.getElementById('txSku');
   const itemNameInput = document.getElementById('txItemName');
   const categoryInput = document.getElementById('txCategory');
+  const modalTitle = document.getElementById('modalTitle');
+  const txIdInput = document.getElementById('txId');
+  const saveBtn = document.getElementById('saveTransactionBtn');
 
-  // 🔹 Auto-fill Item Name + Category when SKU is typed
+  let editMode = false;
+
+  /* 🆕 SKU SUGGESTION DROPDOWN */
+  const suggestionBox = document.createElement('div');
+  suggestionBox.className = 'sku-suggestions border rounded bg-white position-absolute w-100 shadow-sm';
+  suggestionBox.style.zIndex = 1000;
+  suggestionBox.style.maxHeight = '180px';
+  suggestionBox.style.overflowY = 'auto';
+  suggestionBox.style.display = 'none';
+  skuInput.parentNode.style.position = 'relative';
+  skuInput.parentNode.appendChild(suggestionBox);
+
+  // Load all SKUs once
+  let allItems = [];
+  try {
+    const q = query(collection(db, 'items'), orderBy('sku'));
+    const snap = await getDocs(q);
+    allItems = snap.docs.map(d => d.data());
+  } catch (err) {
+    console.error("Failed to load items:", err);
+  }
+
+  // Show suggestions while typing
+  skuInput.addEventListener('input', () => {
+    const term = skuInput.value.trim().toLowerCase();
+    suggestionBox.innerHTML = '';
+
+    if (!term) {
+      suggestionBox.style.display = 'none';
+      return;
+    }
+
+    const matches = allItems.filter(it => it.sku.toLowerCase().includes(term));
+    if (matches.length === 0) {
+      suggestionBox.style.display = 'none';
+      return;
+    }
+
+    matches.slice(0, 8).forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'p-2 suggestion-item';
+      div.style.cursor = 'pointer';
+      div.innerHTML = `<strong>${item.sku}</strong> — ${item.name || ''} (${item.category || ''})`;
+      div.addEventListener('click', () => {
+        skuInput.value = item.sku;
+        itemNameInput.value = item.name || '';
+        categoryInput.value = item.category || '';
+        suggestionBox.style.display = 'none';
+      });
+      suggestionBox.appendChild(div);
+    });
+
+    suggestionBox.style.display = 'block';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!suggestionBox.contains(e.target) && e.target !== skuInput) {
+      suggestionBox.style.display = 'none';
+    }
+  });
+
+  /* --------------------------------------- */
+
+  // Auto-fill item details by SKU
   if (skuInput) {
-    skuInput.addEventListener('input', async () => {
+    skuInput.addEventListener('change', async () => {
       const sku = skuInput.value.trim();
-      if (!sku) {
-        itemNameInput.value = '';
-        categoryInput.value = '';
-        return;
-      }
-
-      try {
-        const itemRef = doc(db, 'items', sku);
-        const snap = await getDoc(itemRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          itemNameInput.value = data.name || '';
-          categoryInput.value = data.category || '';
-        } else {
-          itemNameInput.value = 'Not found';
-          categoryInput.value = '';
-        }
-      } catch (error) {
-        console.error('Error fetching item details:', error);
-        itemNameInput.value = '';
+      const found = allItems.find(i => i.sku === sku);
+      if (found) {
+        itemNameInput.value = found.name || '';
+        categoryInput.value = found.category || '';
+      } else {
+        itemNameInput.value = 'Not found';
         categoryInput.value = '';
       }
     });
   }
 
-  // 🔹 Add new transaction
+  // Add or Update transaction
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -245,85 +283,129 @@ export async function initTransactionsPage() {
       const itemName = itemNameInput.value.trim();
       const category = categoryInput.value.trim();
 
-      if (!sku || qty <= 0) {
-        alert('Please provide SKU and a quantity > 0');
-        return;
+      if (!sku || qty <= 0) return alert('Please provide SKU and valid quantity.');
+
+      if (!editMode) {
+        // Add New
+        const change = type === 'in' ? qty : -qty;
+        const itemRef = doc(db, 'items', sku);
+        try {
+          await updateDoc(itemRef, { qty: increment(change) });
+          const snap = await getDoc(itemRef);
+          const newQty = (snap.data()?.qty ?? 0);
+          const newStatus = newQty <= 5 ? 'Low Stock' : 'In Stock';
+          await updateDoc(itemRef, { status: newStatus });
+        } catch {
+          alert('Failed to update item. Make sure item exists.');
+          return;
+        }
+        await addDoc(collection(db, 'transactions'), {
+          sku, itemName, category,
+          type: type === 'in' ? 'Stock In' : 'Stock Out',
+          qtyChange: change,
+          notes,
+          timestamp: serverTimestamp()
+        });
+        alert('Transaction added!');
+      } else {
+        // Update existing
+        const id = txIdInput.value;
+        await updateDoc(doc(db, 'transactions', id), {
+          sku, itemName, category,
+          type: type === 'in' ? 'Stock In' : 'Stock Out',
+          qtyChange: type === 'in' ? qty : -qty,
+          notes
+        });
+        alert('Transaction updated!');
       }
 
-      const change = type === 'in' ? qty : -qty;
-      const itemRef = doc(db, 'items', sku);
-
-      try {
-        // Update item quantity
-        await updateDoc(itemRef, { qty: increment(change) });
-      } catch (err) {
-        alert('Failed to update item. Make sure item (SKU) exists.');
-        console.error(err);
-        return;
-      }
-
-      try {
-        // Update stock status after update
-        const snap = await getDoc(itemRef);
-        const newQty = (snap.data()?.qty ?? 0);
-        const newStatus = newQty <= 5 ? 'Low Stock' : 'In Stock';
-        await updateDoc(itemRef, { status: newStatus });
-      } catch (err) {
-        console.warn('Could not update computed status', err);
-      }
-
-      // Save transaction details
-      await addDoc(collection(db, 'transactions'), {
-        sku,
-        itemName,
-        category,
-        type: type === 'in' ? 'Stock In' : 'Stock Out',
-        qtyChange: change,
-        notes,
-        timestamp: serverTimestamp()
-      });
-
-      alert('Transaction recorded successfully.');
-      window.location.reload();
+      editMode = false;
+      modalTitle.textContent = "Add Transaction";
+      form.reset();
+      const modal = bootstrap.Modal.getInstance(document.getElementById('addTxModal'));
+      modal.hide();
+      loadTransactions();
     });
   }
 
-  // 🔹 Load transactions table
-  const tbody = document.getElementById('transactionsTable');
-  if (tbody) {
+  // Load Transactions
+  async function loadTransactions() {
+    const tbody = document.getElementById('transactionsTable');
+    if (!tbody) return;
     tbody.innerHTML = '';
     const q = query(collection(db, 'transactions'), orderBy('timestamp', 'desc'));
     const snap = await getDocs(q);
-    const rows = [];
-
     snap.forEach(d => {
       const data = d.data();
-      rows.push(`
-        <tr>
+      tbody.innerHTML += `
+        <tr data-id="${d.id}">
           <td>${fmtDate(data.timestamp)}</td>
           <td>${data.type || ''}</td>
           <td>${data.sku || ''}</td>
           <td>${data.itemName || ''}</td>
           <td>${data.category || ''}</td>
-          <td>${(data.qtyChange > 0 ? '+' : '') + data.qtyChange} ${data.notes || ''}</td>
-        </tr>
-      `);
+          <td>${(data.qtyChange > 0 ? '+' : '') + data.qtyChange} </td>
+          <td> ${data.notes || ''}</td>
+          <td>
+            <button class="btn btn-sm btn-warning edit-tx">✏️</button>
+            <button class="btn btn-sm btn-danger delete-tx">🗑️</button>
+          </td>
+        </tr>`;
     });
 
-    tbody.innerHTML = rows.join('');
-
-    // 🔍 Search Filter
-    const s = document.getElementById('searchTransactions');
-    if (s) {
-      s.addEventListener('input', () => {
-        const term = s.value.toLowerCase();
-        Array.from(tbody.getElementsByTagName('tr')).forEach(r => {
-          const text = r.textContent.toLowerCase();
-          r.style.display = text.includes(term) ? '' : 'none';
-        });
-      });
-    }
+    attachTxHandlers();
   }
+
+  // Attach Edit/Delete
+  function attachTxHandlers() {
+    document.querySelectorAll('.edit-tx').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const tr = e.target.closest('tr');
+        const id = tr.dataset.id;
+        const snap = await getDoc(doc(db, 'transactions', id));
+        if (!snap.exists()) return alert('Transaction not found.');
+        const data = snap.data();
+        editMode = true;
+        txIdInput.value = id;
+        modalTitle.textContent = "Edit Transaction";
+
+        skuInput.value = data.sku || '';
+        itemNameInput.value = data.itemName || '';
+        categoryInput.value = data.category || '';
+        document.getElementById('txType').value = data.type?.includes('In') ? 'in' : 'out';
+        document.getElementById('txQty').value = Math.abs(data.qtyChange || 0);
+        document.getElementById('txNotes').value = data.notes || '';
+
+        const modal = new bootstrap.Modal(document.getElementById('addTxModal'));
+        modal.show();
+      });
+    });
+
+    document.querySelectorAll('.delete-tx').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const tr = e.target.closest('tr');
+        const id = tr.dataset.id;
+        if (!confirm('Are you sure you want to delete this transaction?')) return;
+        await deleteDoc(doc(db, 'transactions', id));
+        alert('Transaction deleted!');
+        loadTransactions();
+      });
+    });
+  }
+
+  // Search
+  const s = document.getElementById('searchTransactions');
+  if (s) {
+    s.addEventListener('input', () => {
+      const term = s.value.toLowerCase();
+      document.querySelectorAll('#transactionsTable tr').forEach(r => {
+        const text = r.textContent.toLowerCase();
+        r.style.display = text.includes(term) ? '' : 'none';
+      });
+    });
+  }
+
+  loadTransactions();
 }
 
 /* ---------- Export to Excel ---------- */
@@ -334,7 +416,7 @@ function exportTableToExcel(tableId, filename) {
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-/* ---------- Bind export buttons ---------- */
+/* ---------- Export buttons ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   const exportInventory = document.getElementById('exportInventory');
   if (exportInventory) exportInventory.addEventListener('click', () => exportTableToExcel('inventoryTableContainer', 'Inventory'));
